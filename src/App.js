@@ -49,37 +49,61 @@ const tempWatchedData = [
 const KEY = "b82f3a9b";
 
 export default function App() {
+  const [query, setQuery] = useState("inception")
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const query = 'interstellar';
+  const [error, setError] = useState("");
+  const [selectedId, setSelectedId] = useState(null);
+
+  const handleSelectMovie = (id) => {
+    setSelectedId((selectedId) => (id === selectedId ? null : id));
+  }
+
+  const handleCloseMovie = () => {
+    setSelectedId(null);
+  }
 
   useEffect(() => {
     async function fetchMovie() {
+
       setIsLoading(true);
+      setError("");
       const res = await fetch(`https://www.omdbapi.com/?apikey=${KEY}&s=${query}`)
       const data = await res.json()
-      setMovies(data.Search)
+
+      setMovies(data.Search);
+      console.log(data.Search)
       setIsLoading(false);
     }
+    if (!query.length < 3) {
+      setMovies([]);
+    }
     fetchMovie()
-  }, []);
+  }, [query]);
 
 
   return (
     <>
       <NavBar movies={movies}>
         <Logo />
-        <Search />
-        <NumResults movies={movies} />
+        <Search query={query} setQuery={setQuery} />
+        <NumResults movies={movies} setMovies={setMovies} />
       </NavBar>
       <Main>
         <Box>
-          {isLoading ? <Loader /> : <MovieList movies={movies} />}
+          {isLoading ? <Loader /> : <MovieList movies={movies} onSelectMovie={handleSelectMovie} />}
         </Box>
         <Box>
-          <WatchedSummary watched={watched} />
-          <WatchedMovieList watched={watched} />
+          {
+            selectedId ? (<MovieDetails selectedId={selectedId} onCloseMovie={handleCloseMovie} />) :
+              (
+                <>
+                  <WatchedSummary watched={watched} />
+                  <WatchedMovieList watched={watched} />
+                </>
+              )
+          }
         </Box>
       </Main>
     </>
@@ -89,7 +113,7 @@ export default function App() {
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
-const Loader = () => { 
+const Loader = () => {
   return <p className="loader">Loading...</p>
 }
 
@@ -110,8 +134,8 @@ const Logo = () => {
   )
 }
 
-const Search = () => {
-  const [query, setQuery] = useState("");
+const Search = ({ query, setQuery }) => {
+
   return (
     <input
       className="search"
@@ -123,11 +147,17 @@ const Search = () => {
   )
 }
 
-const NumResults = ({ movies }) => {
+const NumResults = ({ movies, setMovies }) => {
   return (
     <p className="num-results">
-      Found <strong>{movies.length}</strong> results
-    </p>
+
+      {
+        setMovies &&
+        <p> Found <strong>{movies.length}</strong> results</p >
+      }
+
+    </p >
+
   )
 }
 
@@ -156,43 +186,20 @@ const Box = ({ children }) => {
   )
 }
 
-// const WatchedBox = () => {
-//   const [watched, setWatched] = useState(tempWatchedData);
-//   const [isOpen2, setIsOpen2] = useState(true);
-//   return (
-//     <div className="box">
-//       <button
-//         className="btn-toggle"
-//         onClick={() => setIsOpen2((open) => !open)}
-//       >
-//         {isOpen2 ? "–" : "+"}
-//       </button>
-//       {isOpen2 && (
-//         <>
-//           <WatchedSummary watched={watched} />
-//           <WatchedMovieList watched={watched} />
 
-//         </>
-//       )}
-//     </div>
-//   )
-// }
-
-
-
-const MovieList = ({ movies }) => {
+const MovieList = ({ movies, onSelectMovie }) => {
   return (
-    <ul className="list">
+    <ul className="list list-movies">
       {movies?.map((movie) => (
-        <Movie movie={movie} key={movie.imdbID} />
+        <Movie movie={movie} key={movie.imdbID} onSelectMovie={onSelectMovie} />
       ))}
     </ul>
   )
 }
 
-const Movie = ({ movie }) => {
+const Movie = ({ movie, onSelectMovie }) => {
   return (
-    <li>
+    <li onClick={() => onSelectMovie(movie.imdbID)}>
       <img src={movie.Poster} alt={`${movie.Title} poster`} />
       <h3>{movie.Title}</h3>
       <div>
@@ -202,6 +209,15 @@ const Movie = ({ movie }) => {
         </p>
       </div>
     </li>
+  )
+}
+
+const MovieDetails = ({ selectedId, onCloseMovie }) => {
+  return (
+    <div className="details">
+      <button className="btn-back" onClick={onCloseMovie}>&larr;</button>
+      {selectedId}
+    </div>
   )
 }
 
